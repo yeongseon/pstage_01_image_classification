@@ -48,9 +48,7 @@ if __name__ == '__main__':
     if False:
         model = AlexNet(num_classes=num_classes).to(device)
     else:
-        from torchvision.models import vgg19
-
-        model = vgg19(pretrained=True).to(device)
+        model = VGG19(num_classes=num_classes, pretrained=True, freeze=False).to(device)
 
     # -- data_loader
     dataset = MaskBaseDataset(img_root, label_path, 'train')
