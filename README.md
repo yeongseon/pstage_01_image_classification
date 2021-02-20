@@ -9,4 +9,4 @@
 - `pip install -r requirements.txt`
 
 ### Training
-- `python train.py`
+- `IMG_ROOT=[your image root] LABEL_PATH=[your label path] python train.py`

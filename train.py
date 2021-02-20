@@ -25,8 +25,8 @@ if __name__ == '__main__':
     seed_everything(42)
 
     # -- parameters
-    img_root = '/home/covy/temp/upstage/resized_data/'
-    label_path = '/home/covy/temp/upstage/metadata.csv'
+    img_root = os.getenv("IMG_ROOT")
+    label_path = os.getenv("LABEL_PATH")
 
     val_split = 0.1
     batch_size = 64
