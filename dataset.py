@@ -55,19 +55,19 @@ class MaskBaseDataset(data.Dataset):
     image_paths = []
     labels = []
 
-    def __init__(self, img_root, meta_path, phase, mean=None, std=None):
+    def __init__(self, img_root, label_path, phase="train", mean=[0.5366, 0.5323, 0.5183], std=[0.2456, 0.2517, 0.2605]):
         self.img_root = img_root
-        self.meta_path = meta_path
+        self.label_path = label_path
         self.phase = phase
-        self.mean = [0.5366, 0.5323, 0.5183]  # todo
-        self.std = [0.2456, 0.2517, 0.2605]  # todo
+        self.mean = mean
+        self.std = std
 
         self.setup()
         self.calc_statistics()
 
     def setup(self):
         # -- Homework 1
-        df = pd.read_csv(self.meta_path)  # "../upstage/metadata.csv"
+        df = pd.read_csv(self.label_path)  # "../upstage/metadata.csv"
         profiles = df.path.tolist()
         for profile in profiles:
             for file_name, label in self._file_names.items():
@@ -147,7 +147,7 @@ class MaskMultiLabelDataset(MaskBaseDataset):
     gender_labels = []
 
     def setup(self):
-        df = pd.read_csv(self.meta_path)  # "../upstage/metadata.csv"
+        df = pd.read_csv(self.label_path)  # "../upstage/metadata.csv"
         profiles = df.path.tolist()
         for profile in profiles:
             for file_name, label in self._file_names.items():
