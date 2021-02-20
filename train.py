@@ -78,6 +78,9 @@ if __name__ == '__main__':
     # metrics = []
     # callbacks = []
 
+    # -- logging
+    logger = SummaryWriter(log_dir=f"results/{name}")
+
     best_val_acc = 0
     best_val_loss = np.inf
     for epoch in range(num_epochs):
@@ -109,6 +112,8 @@ if __name__ == '__main__':
                     f"Epoch[{epoch}/{num_epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
+                logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
+                logger.add_scalar("Train/accuracy", train_acc, epoch * len(train_loader) + idx)
 
                 loss_value = 0
                 matches = 0
@@ -136,10 +141,18 @@ if __name__ == '__main__':
 
             val_loss = np.sum(val_loss_items) / len(val_set)
             val_acc = np.sum(val_acc_items) / len(val_set)
-            best_val_loss = min(val_loss, best_val_loss)
-            best_val_acc = max(val_acc, best_val_acc)
+            if val_loss < best_val_loss:
+                print("New best model for val loss! saving the model..")
+                torch.save(model.state_dict(), f"results/{name}/{epoch:03}_loss_{val_loss:4.2}.ckpt")
+                best_val_loss = val_loss
+            if val_acc > best_val_acc:
+                print("New best model for val accuracy! saving the model..")
+                torch.save(model.state_dict(), f"results/{name}/{epoch:03}_accuracy_{val_acc:4.2%}.ckpt")
+                best_val_acc = val_acc
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
             )
+            logger.add_scalar("Val/loss", val_loss, epoch)
+            logger.add_scalar("Val/accuracy", val_acc, epoch)
             print()
