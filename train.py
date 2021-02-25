@@ -1,5 +1,6 @@
 import random
 import os
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 from torch.utils.data import Subset
@@ -9,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from dataset import MaskBaseDataset
 from model import *
+from loss import create_criterion
 
 
 def seed_everything(seed):
@@ -36,9 +38,12 @@ if __name__ == '__main__':
     num_epochs = 100
     lr = 1e-4
     lr_decay_step = 10
+    criterion_name = 'label_smoothing'
 
     train_log_interval = 20
-    name = "02_vgg"
+    # name = "02_vgg"
+    # set a name as time for debugging convenience
+    name = datetime.now(timezone(timedelta(hours=9))).strftime("%y%m%d_%H%M%S")
 
     # -- settings
     use_cuda = torch.cuda.is_available()
@@ -72,7 +77,7 @@ if __name__ == '__main__':
     )
 
     # -- loss & metric
-    criterion = nn.CrossEntropyLoss
+    criterion = create_criterion(criterion_name)
     optimizer = Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
     scheduler = StepLR(optimizer, lr_decay_step, gamma=0.5)
     # metrics = []
@@ -97,7 +102,7 @@ if __name__ == '__main__':
 
             outs = model(inputs)
             preds = torch.argmax(outs, dim=-1)
-            loss = criterion(reduction='mean')(outs, labels)
+            loss = criterion(outs, labels)
 
             loss.backward()
             optimizer.step()
@@ -134,12 +139,12 @@ if __name__ == '__main__':
                 outs = model(inputs)
                 preds = torch.argmax(outs, dim=-1)
 
-                loss_item = criterion(reduction='sum')(outs, labels).item()
+                loss_item = criterion(outs, labels).item()
                 acc_item = (labels == preds).sum().item()
                 val_loss_items.append(loss_item)
                 val_acc_items.append(acc_item)
 
-            val_loss = np.sum(val_loss_items) / len(val_set)
+            val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
             if val_loss < best_val_loss:
                 print("New best model for val loss! saving the model..")
