@@ -28,7 +28,7 @@ if __name__ == '__main__':
     img_root = os.getenv("IMG_ROOT")
     label_path = os.getenv("LABEL_PATH")
 
-    val_split = 0.1
+    val_split = 0.4
     batch_size = 64
     num_workers = 32  # todo : fix
     num_classes = 3
