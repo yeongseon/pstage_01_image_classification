@@ -1,6 +1,5 @@
 import random
 import os
-from datetime import datetime, timedelta, timezone
 
 import numpy as np
 from torch.utils.data import Subset
@@ -41,9 +40,7 @@ if __name__ == '__main__':
     criterion_name = 'label_smoothing'
 
     train_log_interval = 20
-    # name = "02_vgg"
-    # set a name as time for debugging convenience
-    name = datetime.now(timezone(timedelta(hours=9))).strftime("%y%m%d_%H%M%S")
+    name = "02_vgg"
 
     # -- settings
     use_cuda = torch.cuda.is_available()
