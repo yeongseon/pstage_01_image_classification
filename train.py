@@ -109,7 +109,7 @@ if __name__ == '__main__':
             if (idx + 1) % train_log_interval == 0:
                 train_loss = loss_value / train_log_interval
                 train_acc = matches / batch_size / train_log_interval
-                current_lr = optimizer.param_groups[0]['lr']
+                current_lr = scheduler.get_lr()
                 print(
                     f"Epoch[{epoch}/{num_epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
