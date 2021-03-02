@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     val_split = 0.4
     batch_size = 64
-    num_workers = 32  # todo : fix
+    num_workers = 8
     num_classes = 3
 
     num_epochs = 100
