@@ -55,7 +55,7 @@ class MaskBaseDataset(data.Dataset):
     image_paths = []
     labels = []
 
-    def __init__(self, img_root, label_path, phase="train", mean=[0.5366, 0.5323, 0.5183], std=[0.2456, 0.2517, 0.2605]):
+    def __init__(self, img_root, label_path, phase="train", mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.img_root = img_root
         self.label_path = label_path
         self.phase = phase
