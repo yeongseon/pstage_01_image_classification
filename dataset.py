@@ -92,7 +92,7 @@ class MaskBaseDataset(data.Dataset):
 
     def train_transform(self):
         return transforms.Compose([
-            Resize((128, 96), Image.BILINEAR),  # todo : img_size
+            Resize((96, 128), Image.BILINEAR),
             RandomRotation([-8, +8]),
             GaussianBlur(51, (0.1, 2.0)),
             ColorJitter(brightness=0.5, saturation=0.5, hue=0.5),  # todo : param
@@ -103,7 +103,7 @@ class MaskBaseDataset(data.Dataset):
 
     def test_transform(self):
         return transforms.Compose([
-            Resize((128, 96), Image.BILINEAR),
+            Resize((96, 128), Image.BILINEAR),
             ToTensor(),
             Normalize(mean=self.mean, std=self.std),
         ])
