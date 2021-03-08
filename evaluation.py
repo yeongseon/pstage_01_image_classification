@@ -31,7 +31,7 @@ def evaluation(gt_path, pred_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset type (default: MaskBaseDataset)')
+    parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
     args = parser.parse_args()
 
     gt_path = os.environ.get('SM_GROUND_TRUTH_DIR')
