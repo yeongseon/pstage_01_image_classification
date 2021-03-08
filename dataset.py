@@ -6,7 +6,7 @@ import torch.utils.data as data
 import yaml
 from PIL import Image
 from torchvision import transforms
-from torchvision.transforms import Resize, ToTensor, Normalize, GaussianBlur, RandomRotation, ColorJitter
+from torchvision.transforms import Resize, ToTensor, Normalize, RandomRotation
 
 IMG_EXTENSIONS = [
     ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
@@ -90,8 +90,6 @@ class MaskBaseDataset(data.Dataset):
         return transforms.Compose([
             Resize((96, 128), Image.BILINEAR),
             RandomRotation([-8, +8]),
-            GaussianBlur(51, (0.1, 2.0)),
-            ColorJitter(brightness=0.5, saturation=0.5, hue=0.5),  # todo : param
             ToTensor(),
             Normalize(mean=self.mean, std=self.std),
             AddGaussianNoise(0., 1.)
