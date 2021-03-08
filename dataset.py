@@ -1,11 +1,10 @@
 import os
 
 import numpy as np
-import pandas as pd
+import torch
 import torch.utils.data as data
 import yaml
 from PIL import Image
-import torch
 from torchvision import transforms
 from torchvision.transforms import Resize, ToTensor, Normalize, GaussianBlur, RandomRotation, ColorJitter
 
@@ -55,9 +54,8 @@ class MaskBaseDataset(data.Dataset):
     image_paths = []
     labels = []
 
-    def __init__(self, img_root, label_path, phase="train", mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
-        self.img_root = img_root
-        self.label_path = label_path
+    def __init__(self, data_dir, phase="train", mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
+        self.data_dir = data_dir
         self.phase = phase
         self.mean = mean
         self.std = std
@@ -66,12 +64,10 @@ class MaskBaseDataset(data.Dataset):
         self.calc_statistics()
 
     def setup(self):
-        # -- Homework 1
-        df = pd.read_csv(self.label_path)  # "../upstage/metadata.csv"
-        profiles = df.path.tolist()
+        profiles = os.listdir(self.data_dir)
         for profile in profiles:
             for file_name, label in self._file_names.items():
-                img_path = os.path.join(self.img_root, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
+                img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
                 if os.path.exists(img_path) and is_image_file(img_path):
                     self.image_paths.append(img_path)
                     self.labels.append(label)
@@ -151,11 +147,10 @@ class MaskMultiLabelDataset(MaskBaseDataset):
     age_labels = []
 
     def setup(self):
-        df = pd.read_csv(self.label_path)  # "../upstage/metadata.csv"
-        profiles = df.path.tolist()
+        profiles = os.listdir(self.data_dir)
         for profile in profiles:
             for file_name, label in self._file_names.items():
-                img_path = os.path.join(self.img_root, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
+                img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
                 if os.path.exists(img_path) and is_image_file(img_path):
                     self.image_paths.append(img_path)
                     self.labels.append(label)
