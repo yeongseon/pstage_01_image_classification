@@ -36,6 +36,8 @@ class AddGaussianNoise(object):
 
 
 class MaskBaseDataset(data.Dataset):
+    num_classes = 3
+
     class Labels:
         mask = 0
         incorrect = 1
@@ -134,6 +136,8 @@ class MaskBaseDataset(data.Dataset):
 
 
 class MaskMultiLabelDataset(MaskBaseDataset):
+    num_classes = 3 + 2 + 3
+
     class GenderLabels:
         male = 0
         female = 1
@@ -177,6 +181,8 @@ class MaskMultiLabelDataset(MaskBaseDataset):
 
 
 class MaskMultiClassDataset(MaskMultiLabelDataset):
+    num_classes = 3 * 2 * 3
+
     @staticmethod
     def map_multi_class(mask_label, gender_label, age_label):
         return mask_label * 6 + gender_label * 3 + age_label

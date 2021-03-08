@@ -58,6 +58,7 @@ def train(data_dir, model_dir, args):
     dataset = dataset_cls(
         data_dir=data_dir
     )
+    num_classes = dataset.num_classes  # 3 if MaskBaseDataset, 8 if MaskMultiLabelDataset, 18 if MaskMultiClassDataset
 
     n_val = int(len(dataset) * args.val_ratio)
     n_train = len(dataset) - n_val
@@ -67,7 +68,7 @@ def train(data_dir, model_dir, args):
     # -- model
     model_cls = getattr(import_module("model"), args.model)  # default: BaseModel
     model = model_cls(
-        num_classes=args.num_classes
+        num_classes=num_classes
     ).to(device)
     if num_gpus > 1:
         model = torch.nn.DataParallel(model)
@@ -182,7 +183,6 @@ if __name__ == '__main__':
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
-    parser.add_argument('--num_classes', type=int, default='3', help='number of classes')
     parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset type (default: MaskBaseDataset)')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
