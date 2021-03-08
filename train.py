@@ -1,16 +1,18 @@
-import random
+import argparse
+import glob
 import os
+import random
+import re
 from importlib import import_module
+from pathlib import Path
 
 import numpy as np
-from torch.utils.data import Subset
-from torch.optim import Adam
 from torch.optim.lr_scheduler import StepLR
+from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from dataset import MaskBaseDataset
-from model import *
 from loss import create_criterion
+from model import *
 
 
 def seed_everything(seed):
@@ -23,76 +25,85 @@ def seed_everything(seed):
     random.seed(seed)
 
 
-if __name__ == '__main__':
-    seed_everything(42)
+def increment_path(path, exist_ok=False):
+    """ Automatically increment path, i.e. runs/exp --> runs/exp0, runs/exp1 etc.
 
-    # -- parameters
-    img_root = os.getenv("IMG_ROOT")
-    label_path = os.getenv("LABEL_PATH")
+    Args:
+        path (str or pathlib.Path): f"{model_dir}/{args.name}".
+        exist_ok (bool): whether increment path (increment if False).
+    """
+    path = Path(path)
+    if (path.exists() and exist_ok) or (not path.exists()):
+        return str(path)
+    else:
+        dirs = glob.glob(f"{path}*")
+        matches = [re.search(rf"%s(\d+)" % path.stem, d) for d in dirs]
+        i = [int(m.groups()[0]) for m in matches if m]
+        n = max(i) + 1 if i else 2
+        return f"{path}{n}"
 
-    model_name = "VGG19"
-    use_pretrained = True
-    freeze_backbone = False
 
-    val_split = 0.4
-    batch_size = 64
-    num_workers = 8
-    num_classes = 3
+def train(data_dir, model_dir, args):
+    seed_everything(args.seed)
 
-    num_epochs = 100
-    lr = 1e-4
-    lr_decay_step = 10
-    criterion_name = 'label_smoothing'
-
-    train_log_interval = 20
-    name = "02_vgg"
+    save_dir = increment_path(os.path.join(model_dir, args.name))
 
     # -- settings
+    num_gpus = torch.cuda.device_count()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    # -- model
-    model_cls = getattr(import_module("model"), model_name)
-    model = model_cls(
-        num_classes=num_classes,
-        pretrained=use_pretrained,
-        freeze=freeze_backbone
-    ).to(device)
-
     # -- data_loader
-    dataset = MaskBaseDataset(img_root, label_path, 'train')
-    n_val = int(len(dataset) * val_split)
+    dataset_cls = getattr(import_module("dataset"), args.dataset)  # default: MaskBaseDataset
+    dataset = dataset_cls(
+        data_dir=data_dir
+    )
+
+    n_val = int(len(dataset) * args.val_ratio)
     n_train = len(dataset) - n_val
     train_set, val_set = torch.utils.data.random_split(dataset, [n_train, n_val])
-    val_set.dataset.set_phase("test")  # todo : fix
+    val_set.dataset.set_phase("test")
 
-    train_loader = torch.utils.data.DataLoader(
+    # -- model
+    model_cls = getattr(import_module("model"), args.model)  # default: BaseModel
+    model = model_cls(
+        num_classes=args.num_classes
+    ).to(device)
+    if num_gpus > 1:
+        model = torch.nn.DataParallel(model)
+
+    train_loader = DataLoader(
         train_set,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        batch_size=args.batch_size,
+        num_workers=8,
+        pin_memory=use_cuda,
         drop_last=True,
     )
 
-    val_loader = torch.utils.data.DataLoader(
+    val_loader = DataLoader(
         val_set,
-        batch_size=batch_size,
-        num_workers=num_workers,
+        batch_size=args.valid_batch_size,
+        num_workers=8,
+        pin_memory=use_cuda,
         drop_last=True,
     )
 
     # -- loss & metric
-    criterion = create_criterion(criterion_name)
-    optimizer = Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, weight_decay=5e-4)
-    scheduler = StepLR(optimizer, lr_decay_step, gamma=0.5)
-    # metrics = []
-    # callbacks = []
+    criterion = create_criterion(args.criterion)  # default: label_smoothing
+    opt_cls = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
+    optimizer = opt_cls(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=args.lr,
+        weight_decay=5e-4
+    )
+    scheduler = StepLR(optimizer, args.lr_decay_step, gamma=0.5)
 
     # -- logging
-    logger = SummaryWriter(log_dir=f"results/{name}")
+    logger = SummaryWriter(log_dir=save_dir)
 
     best_val_acc = 0
     best_val_loss = np.inf
-    for epoch in range(num_epochs):
+    for epoch in range(args.epochs):
         # train loop
         model.train()
         loss_value = 0
@@ -113,12 +124,12 @@ if __name__ == '__main__':
 
             loss_value += loss.item()
             matches += (preds == labels).sum().item()
-            if (idx + 1) % train_log_interval == 0:
-                train_loss = loss_value / train_log_interval
-                train_acc = matches / batch_size / train_log_interval
+            if (idx + 1) % args.log_interval == 0:
+                train_loss = loss_value / args.log_interval
+                train_acc = matches / args.batch_size / args.log_interval
                 current_lr = scheduler.get_last_lr()
                 print(
-                    f"Epoch[{epoch}/{num_epochs}]({idx + 1}/{len(train_loader)}) || "
+                    f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
                 )
                 logger.add_scalar("Train/loss", train_loss, epoch * len(train_loader) + idx)
@@ -150,14 +161,12 @@ if __name__ == '__main__':
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
-            if val_loss < best_val_loss:
-                print("New best model for val loss! saving the model..")
-                torch.save(model.state_dict(), f"results/{name}/{epoch:03}_loss_{val_loss:4.2}.ckpt")
-                best_val_loss = val_loss
+            best_val_loss = min(best_val_loss, val_loss)
             if val_acc > best_val_acc:
-                print("New best model for val accuracy! saving the model..")
-                torch.save(model.state_dict(), f"results/{name}/{epoch:03}_accuracy_{val_acc:4.2%}.ckpt")
+                print(f"New best model for val accuracy : {val_acc:4.2%}! saving the best model..")
+                torch.save(model.state_dict(), f"{save_dir}/best.pth")
                 best_val_acc = val_acc
+            torch.save(model.state_dict(), f"{save_dir}/last.pth")
             print(
                 f"[Val] acc : {val_acc:4.2%}, loss: {val_loss:4.2} || "
                 f"best acc : {best_val_acc:4.2%}, best loss: {best_val_loss:4.2}"
@@ -165,3 +174,36 @@ if __name__ == '__main__':
             logger.add_scalar("Val/loss", val_loss, epoch)
             logger.add_scalar("Val/accuracy", val_acc, epoch)
             print()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    # Data and model checkpoints directories
+    parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
+    parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
+    parser.add_argument('--num_classes', type=int, default='3', help='number of classes')
+    parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset type (default: MaskBaseDataset)')
+    parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
+    parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
+    parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
+    parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer type (default: SGD)')
+    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
+    parser.add_argument('--momentum', type=float, default=0.5, help='optimizer momentum (default: 0.5)')
+    parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
+    parser.add_argument('--criterion', type=str, default='label_smoothing', help='criterion type (default: label_smoothing)')
+    parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
+    parser.add_argument('--log_interval', type=int, default=20, help='how many batches to wait before logging training status')
+    parser.add_argument('--name', default='exp', help='save to project/name')
+
+    # Container environment
+    parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_TRAIN', '/data'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_MODEL_DIR', '/model'))
+
+    args = parser.parse_args()
+    print(args)
+
+    data_dir = args.data_dir
+    model_dir = args.model_dir
+
+    train(data_dir, model_dir, args)
