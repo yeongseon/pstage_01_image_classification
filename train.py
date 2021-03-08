@@ -7,12 +7,12 @@ from importlib import import_module
 from pathlib import Path
 
 import numpy as np
+import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from loss import create_criterion
-from model import *
 
 
 def seed_everything(seed):
