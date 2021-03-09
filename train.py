@@ -54,7 +54,7 @@ def train(data_dir, model_dir, args):
     device = torch.device("cuda" if use_cuda else "cpu")
 
     # -- data_loader
-    dataset_cls = getattr(import_module("dataset"), args.dataset)  # default: MaskBaseDataset
+    dataset_cls = getattr(import_module("dataset"), args.dataset)  # default: MaskMultiClassDataset
     dataset = dataset_cls(
         data_dir=data_dir
     )
