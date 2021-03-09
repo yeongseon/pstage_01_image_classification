@@ -15,15 +15,15 @@ def evaluation(gt_path, pred_path):
     """
     num_classes = getattr(import_module("dataset"), args.dataset).num_classes
     results = {}
-    for status in ['public', 'private']:
-        gt = pd.read_csv(os.path.join(gt_path, f'{status}.csv'))
-        pred = pd.read_csv(os.path.join(pred_path, f'{status}.csv'))
+    for access in ['public', 'private']:
+        gt = pd.read_csv(os.path.join(gt_path, f'{access}.csv'))
+        pred = pd.read_csv(os.path.join(pred_path, f'{access}.csv'))
 
         cls_report = classification_report(gt.ans.values, pred.ans.values, labels=np.arange(num_classes), output_dict=True)
         acc = cls_report['accuracy']
         f1 = np.mean([cls_report[str(i)]['f1-score'] for i in range(num_classes)])
 
-        results[status] = {'accuracy': acc, 'f1': f1}
+        results[access] = {'accuracy': acc, 'f1': f1}
 
     print(results)
     result_str = f'{results["private"]["accuracy"] * 100:.2f}%'
