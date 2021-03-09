@@ -63,7 +63,7 @@ def train(data_dir, model_dir, args):
     n_val = int(len(dataset) * args.val_ratio)
     n_train = len(dataset) - n_val
     train_set, val_set = torch.utils.data.random_split(dataset, [n_train, n_val])
-    val_set.dataset.set_phase("test")
+    val_set.dataset.set_phase("val")
 
     # -- model
     model_cls = getattr(import_module("model"), args.model)  # default: BaseModel

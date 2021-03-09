@@ -97,7 +97,7 @@ class MaskBaseDataset(data.Dataset):
             AddGaussianNoise(0., 1.)
         ])
 
-    def test_transform(self):
+    def val_transform(self):
         return transforms.Compose([
             Resize((96, 128), Image.BILINEAR),
             ToTensor(),
@@ -107,8 +107,8 @@ class MaskBaseDataset(data.Dataset):
     def transform(self, image):
         if self.phase == "train":
             transform = self.train_transform()
-        elif self.phase == "test":
-            transform = self.test_transform()
+        elif self.phase == "val":
+            transform = self.val_transform()
         else:
             raise AttributeError
         return transform(image)
@@ -131,7 +131,7 @@ class MaskBaseDataset(data.Dataset):
         return Image.open(image_path)
 
     def set_phase(self, phase):
-        assert phase in ["train", "test"], "phase should be either train or test"
+        assert phase in ["train", "val"], "phase should be either train or val"
         self.phase = phase
 
 
