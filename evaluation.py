@@ -14,18 +14,19 @@ def evaluation(gt_path, pred_path):
         pred_path (string) : root directory of prediction file (output of inference.py)
     """
     num_classes = getattr(import_module("dataset"), args.dataset).num_classes
-    gt = pd.read_csv(os.path.join(gt_path, f'gt.csv'))
-    pred = pd.read_csv(os.path.join(pred_path, f'output.csv'))
+    results = {}
+    for status in ['public', 'private']:
+        gt = pd.read_csv(os.path.join(gt_path, f'{status}.csv'))
+        pred = pd.read_csv(os.path.join(pred_path, f'{status}.csv'))
 
-    cls_report = classification_report(gt.values, pred.values, labels=np.arange(num_classes), output_dict=True)
-    acc = cls_report['accuracy']
-    f1 = np.mean([cls_report[str(i)]['f1-score'] for i in range(num_classes)])
+        cls_report = classification_report(gt.ans.values, pred.ans.values, labels=np.arange(num_classes), output_dict=True)
+        acc = cls_report['accuracy']
+        f1 = np.mean([cls_report[str(i)]['f1-score'] for i in range(num_classes)])
 
-    results = {'accuracy': acc, 'f1': f1}
+        results[status] = {'accuracy': acc, 'f1': f1}
 
     print(results)
-    result_str = f'{results["accuracy"] * 100:.2f}%'
-
+    result_str = f'{results["private"]["accuracy"] * 100:.2f}%'
     return result_str
 
 

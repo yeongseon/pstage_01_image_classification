@@ -1,10 +1,12 @@
 import argparse
 import os
-import tarfile
 from importlib import import_module
 
+import pandas as pd
 import torch
 from torch.utils.data import DataLoader
+
+from dataset import TestDataset
 
 
 def load_model(saved_model, num_classes):
@@ -30,39 +32,39 @@ def inference(data_dir, model_dir, output_dir, args):
     num_gpus = torch.cuda.device_count()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    output_file = open(os.path.join(output_dir, 'output.csv'), 'w')
 
-    dataset_cls = getattr(import_module("dataset"), args.dataset)
-    dataset = dataset_cls(
-        data_dir=data_dir,
-        phase='test',
-    )
-
-    test_loader = DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        num_workers=8,
-        pin_memory=use_cuda,
-        drop_last=True,
-    )
-
-    model = load_model(model_dir, dataset.num_classes).to(device)
+    num_classes = getattr(import_module("dataset"), args.dataset).num_classes
+    model = load_model(model_dir, num_classes).to(device)
     if num_gpus > 1:
         model = torch.nn.DataParallel(model)
     model.eval()
 
-    for data, target in test_loader:
-        data = data.to(device)
-        target = target.to(device)
+    for access in ['public', 'private']:
+        img_root = os.path.join(data_dir, access, 'images')
+        info_path = os.path.join(data_dir, access, 'info.csv')
+        info = pd.read_csv(info_path)
 
-        outs = model(data)
-        preds = outs.argmax(dim=1)
-        preds = preds.detach().cpu().numpy()
+        img_paths = [os.path.join(img_root, img_id) for img_id in info.ImageID]
+        dataset = TestDataset(img_paths)
+        loader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=args.batch_size,
+            num_workers=8,
+            shuffle=False,
+            pin_memory=use_cuda,
+            drop_last=False,
+        )
 
-        for pred in preds:
-            output_file.write(f'{pred}\n')
+        preds = []
+        for idx, images in enumerate(loader):
+            images = images.to(device)
+            pred = model(images)
+            pred = pred.argmax(dim=-1)
+            preds.extend(pred.cpu().numpy())
 
-    return
+        info['ans'] = preds
+        info.to_csv(os.path.join(output_dir, f'{access}.csv'), index=False)
+        print(f'Inference Done!')
 
 
 if __name__ == '__main__':
