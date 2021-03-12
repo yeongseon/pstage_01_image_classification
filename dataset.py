@@ -23,6 +23,19 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
+class BaseAugmentation:
+    def __init__(self, resize, mean, std, **args):
+        self.transform = transforms.Compose([
+            Resize(resize, Image.BILINEAR),
+            RandomRotation([-8, +8]),
+            ToTensor(),
+            Normalize(mean=mean, std=std),
+        ])
+
+    def __call__(self, image):
+        return self.transform(image)
+
+
 class AddGaussianNoise(object):
     def __init__(self, mean=0., std=1.):
         self.std = std
@@ -33,6 +46,26 @@ class AddGaussianNoise(object):
 
     def __repr__(self):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
+
+class AugmentationWithGaussianNoise:
+    """
+    Custom Augmentation Example
+    """
+    def __init__(self, resize, mean, std, **args):
+        noise_mean = args.get("noise_mean", 0.)
+        noise_std = args.get("noise_std", 1.)
+
+        self.transform = transforms.Compose([
+            Resize(resize, Image.BILINEAR),
+            RandomRotation([-8, +8]),
+            ToTensor(),
+            Normalize(mean=mean, std=std),
+            AddGaussianNoise(noise_mean, noise_std)
+        ])
+
+    def __call__(self, image):
+        return self.transform(image)
 
 
 class MaskBaseDataset(data.Dataset):
@@ -56,11 +89,11 @@ class MaskBaseDataset(data.Dataset):
     image_paths = []
     labels = []
 
-    def __init__(self, data_dir, phase="train", mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
+    def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.data_dir = data_dir
-        self.phase = phase
         self.mean = mean
         self.std = std
+        self.transform = BaseAugmentation((96, 128), mean, std)
 
         self.setup()
         self.calc_statistics()
@@ -88,30 +121,8 @@ class MaskBaseDataset(data.Dataset):
             self.mean = np.mean(sums, axis=0) / 255
             self.std = (np.mean(squared, axis=0) - self.mean ** 2) ** 0.5 / 255
 
-    def train_transform(self):
-        return transforms.Compose([
-            Resize((96, 128), Image.BILINEAR),
-            RandomRotation([-8, +8]),
-            ToTensor(),
-            Normalize(mean=self.mean, std=self.std),
-            AddGaussianNoise(0., 1.)
-        ])
-
-    def val_transform(self):
-        return transforms.Compose([
-            Resize((96, 128), Image.BILINEAR),
-            ToTensor(),
-            Normalize(mean=self.mean, std=self.std),
-        ])
-
-    def transform(self, image):
-        if self.phase == "train":
-            transform = self.train_transform()
-        elif self.phase == "val":
-            transform = self.val_transform()
-        else:
-            raise AttributeError
-        return transform(image)
+    def set_transform(self, transform):
+        self.transform = transform
 
     def __getitem__(self, index):
         image = self.read_image(index)
@@ -129,10 +140,6 @@ class MaskBaseDataset(data.Dataset):
     def read_image(self, index):
         image_path = self.image_paths[index]
         return Image.open(image_path)
-
-    def set_phase(self, phase):
-        assert phase in ["train", "val"], "phase should be either train or val"
-        self.phase = phase
 
 
 class MaskMultiLabelDataset(MaskBaseDataset):
@@ -199,10 +206,10 @@ class MaskMultiClassDataset(MaskMultiLabelDataset):
 
 
 class TestDataset(data.Dataset):
-    def __init__(self, img_paths, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
+    def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.img_paths = img_paths
         self.transform = transforms.Compose([
-            Resize((96, 128), Image.BILINEAR),
+            Resize(resize, Image.BILINEAR),
             ToTensor(),
             Normalize(mean=mean, std=std),
         ])

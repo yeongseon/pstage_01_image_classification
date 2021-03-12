@@ -45,7 +45,7 @@ def inference(data_dir, model_dir, output_dir, args):
         info = pd.read_csv(info_path)
 
         img_paths = [os.path.join(img_root, img_id) for img_id in info.ImageID]
-        dataset = TestDataset(img_paths)
+        dataset = TestDataset(img_paths, args.resize)
         loader = torch.utils.data.DataLoader(
             dataset,
             batch_size=args.batch_size,
@@ -73,6 +73,7 @@ if __name__ == '__main__':
     # Data and model checkpoints directories
     parser.add_argument('--batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
     parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
+    parser.add_argument('--resize', type=tuple, default=(96, 128), help='resize size for image when you trained (default: (96, 128))')
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
 
     # Container environment

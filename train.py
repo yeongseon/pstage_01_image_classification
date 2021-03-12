@@ -53,25 +53,26 @@ def train(data_dir, model_dir, args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    # -- data_loader
+    # -- dataset
     dataset_cls = getattr(import_module("dataset"), args.dataset)  # default: MaskMultiClassDataset
     dataset = dataset_cls(
-        data_dir=data_dir
+        data_dir=data_dir,
     )
     num_classes = dataset.num_classes  # 3 if MaskBaseDataset, 8 if MaskMultiLabelDataset, 18 if MaskMultiClassDataset
 
+    # -- augmentation
+    transform_cls = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation
+    transform = transform_cls(
+        resize=args.resize,
+        mean=dataset.mean,
+        std=dataset.std,
+    )
+    dataset.set_transform(transform)
+
+    # -- data_loader
     n_val = int(len(dataset) * args.val_ratio)
     n_train = len(dataset) - n_val
     train_set, val_set = torch.utils.data.random_split(dataset, [n_train, n_val])
-    val_set.dataset.set_phase("val")
-
-    # -- model
-    model_cls = getattr(import_module("model"), args.model)  # default: BaseModel
-    model = model_cls(
-        num_classes=num_classes
-    ).to(device)
-    if num_gpus > 1:
-        model = torch.nn.DataParallel(model)
 
     train_loader = DataLoader(
         train_set,
@@ -88,6 +89,14 @@ def train(data_dir, model_dir, args):
         pin_memory=use_cuda,
         drop_last=True,
     )
+
+    # -- model
+    model_cls = getattr(import_module("model"), args.model)  # default: BaseModel
+    model = model_cls(
+        num_classes=num_classes
+    ).to(device)
+    if num_gpus > 1:
+        model = torch.nn.DataParallel(model)
 
     # -- loss & metric
     criterion = create_criterion(args.criterion)  # default: label_smoothing
@@ -183,6 +192,8 @@ if __name__ == '__main__':
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
+    parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
+    parser.add_argument('--resize', type=tuple, default=(96, 128), help='resize size for image when training (default: (96, 128))')
     parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
     parser.add_argument('--valid_batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
