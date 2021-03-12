@@ -3,7 +3,6 @@ import os
 import numpy as np
 import torch
 import torch.utils.data as data
-import yaml
 from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import Resize, ToTensor, Normalize, RandomRotation
@@ -12,11 +11,6 @@ IMG_EXTENSIONS = [
     ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
     ".PNG", ".ppm", ".PPM", ".bmp", ".BMP",
 ]
-
-
-def get_config(path):
-    with open(path, "r", encoding="utf-8") as stream:
-        return yaml.load(stream, Loader=yaml.SafeLoader)
 
 
 def is_image_file(filename):
@@ -52,6 +46,7 @@ class AugmentationWithGaussianNoise:
     """
     Custom Augmentation Example
     """
+
     def __init__(self, resize, mean, std, **args):
         noise_mean = args.get("noise_mean", 0.)
         noise_std = args.get("noise_std", 1.)
