@@ -79,6 +79,7 @@ def train(data_dir, model_dir, args):
         train_set,
         batch_size=args.batch_size,
         num_workers=8,
+        shuffle=True,
         pin_memory=use_cuda,
         drop_last=True,
     )
@@ -87,6 +88,7 @@ def train(data_dir, model_dir, args):
         val_set,
         batch_size=args.valid_batch_size,
         num_workers=8,
+        shuffle=False,
         pin_memory=use_cuda,
         drop_last=True,
     )
