@@ -1,5 +1,6 @@
 import argparse
 import glob
+import json
 import os
 import random
 import re
@@ -110,6 +111,8 @@ def train(data_dir, model_dir, args):
 
     # -- logging
     logger = SummaryWriter(log_dir=save_dir)
+    with open(os.path.join(save_dir, 'config.json'), 'w', encoding='utf-8') as f:
+        json.dump(vars(args), f, ensure_ascii=False, indent=4)
 
     best_val_acc = 0
     best_val_loss = np.inf
@@ -200,7 +203,6 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
     parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer type (default: SGD)')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate (default: 1e-3)')
-    parser.add_argument('--momentum', type=float, default=0.5, help='optimizer momentum (default: 0.5)')
     parser.add_argument('--val_ratio', type=float, default=0.2, help='ratio for validaton (default: 0.2)')
     parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
     parser.add_argument('--lr_decay_step', type=int, default=20, help='learning rate scheduler deacy step (default: 20)')
