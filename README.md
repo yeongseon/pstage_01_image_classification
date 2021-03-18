@@ -7,7 +7,6 @@
 
 ### Install Requirements
 - `pip install -r requirements.txt`
-- (evaluation) `pip install -r requirements-eval.txt`
 
 ### Training
 - `SM_CHANNEL_TRAIN=[train image dir] SM_MODEL_DIR=[model saving dir] python train.py`
