@@ -2,8 +2,8 @@
 
 ## Getting Started    
 ### Dependencies
-- torch==1.7.1
-- torchvision==0.8.2                                                              
+- torch==1.6.0
+- torchvision==0.7.0                                                              
 
 ### Install Requirements
 - `pip install -r requirements.txt`
