@@ -6,38 +6,44 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report
 
-from dataset import MaskBaseDataset
 
-
-def evaluation(gt_path, pred_path):
+def evaluation(gt_dir, pred_dir):
     """
     Args:
-        gt_path (string) : root directory of ground truth file
-        pred_path (string) : root directory of prediction file (output of inference.py)
+        gt_dir (string) : root directory of ground truth file
+        pred_dir (string) : root directory of prediction file (output of inference.py)
     """
-    num_classes = MaskBaseDataset.num_classes  # 18
+    num_classes = getattr(import_module("dataset"), args.dataset).num_classes
     results = {}
-    for access in ['public', 'private']:
-        gt = pd.read_csv(os.path.join(gt_path, f'{access}.csv'))
-        pred = pd.read_csv(os.path.join(pred_path, f'{access}.csv'))
 
-        cls_report = classification_report(gt.ans.values, pred.ans.values, labels=np.arange(num_classes), output_dict=True)
-        acc = cls_report['accuracy']
-        f1 = np.mean([cls_report[str(i)]['f1-score'] for i in range(num_classes)])
+    gt = pd.read_csv(os.path.join(gt_dir, 'gt.csv'))
+    pred = pd.read_csv(os.path.join(pred_dir, 'output.csv'))
+    cls_report = classification_report(gt.ans.values, pred.ans.values, labels=np.arange(num_classes), output_dict=True)
+    acc = round(cls_report['accuracy'] * 100, 2)
+    f1 = np.mean([cls_report[str(i)]['f1-score'] for i in range(num_classes)])
+    f1 = round(f1, 2)
 
-        results[access] = {'accuracy': acc, 'f1': f1}
+    results['accuracy'] = {
+        'value': acc,
+        'rank': True,
+        'decs': True,
+    }
+    results['f1'] = {
+        'value': f1,
+        'rank': False,
+        'decs': True,
+    }
 
-    print(results)
-    result_str = f'{results["private"]["accuracy"] * 100:.2f}%'
-    return result_str
+    return json.dumps(results)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    args = parser.parse_args()
-
-    gt_path = os.environ.get('SM_GROUND_TRUTH_DIR')
-    pred_path = os.environ.get('SM_OUTPUT_DATA_DIR')
-
-    result_str = evaluation(gt_path, pred_path)
-    print(f'Final Score: {result_str}')
+#if __name__ == '__main__':
+#    parser = argparse.ArgumentParser()
+#    parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
+#    args = parser.parse_args()
+#
+#    gt_dir = os.environ.get('SM_GROUND_TRUTH_DIR')
+#    pred_dir = os.environ.get('SM_OUTPUT_DATA_DIR')
+#
+#    result_str = evaluation(gt_dir, pred_dir)
+#    print(f'Final Score: {result_str}')
