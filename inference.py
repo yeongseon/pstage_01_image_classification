@@ -39,32 +39,31 @@ def inference(data_dir, model_dir, output_dir, args):
         model = torch.nn.DataParallel(model)
     model.eval()
 
-    for access in ['public', 'private']:
-        img_root = os.path.join(data_dir, access, 'images')
-        info_path = os.path.join(data_dir, access, 'info.csv')
-        info = pd.read_csv(info_path)
+    img_root = os.path.join(data_dir, 'images')
+    info_path = os.path.join(data_dir, 'info.csv')
+    info = pd.read_csv(info_path)
 
-        img_paths = [os.path.join(img_root, img_id) for img_id in info.ImageID]
-        dataset = TestDataset(img_paths, args.resize)
-        loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=args.batch_size,
-            num_workers=8,
-            shuffle=False,
-            pin_memory=use_cuda,
-            drop_last=False,
-        )
+    img_paths = [os.path.join(img_root, img_id) for img_id in info.ImageID]
+    dataset = TestDataset(img_paths, args.resize)
+    loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        num_workers=8,
+        shuffle=False,
+        pin_memory=use_cuda,
+        drop_last=False,
+    )
 
-        preds = []
-        for idx, images in enumerate(loader):
-            images = images.to(device)
-            pred = model(images)
-            pred = pred.argmax(dim=-1)
-            preds.extend(pred.cpu().numpy())
+    preds = []
+    for idx, images in enumerate(loader):
+        images = images.to(device)
+        pred = model(images)
+        pred = pred.argmax(dim=-1)
+        preds.extend(pred.cpu().numpy())
 
-        info['ans'] = preds
-        info.to_csv(os.path.join(output_dir, f'{access}.csv'), index=False)
-        print(f'Inference Done!')
+    info['ans'] = preds
+    info.to_csv(os.path.join(output_dir, f'output.csv'), index=False)
+    print(f'Inference Done!')
 
 
 if __name__ == '__main__':
