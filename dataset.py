@@ -64,31 +64,42 @@ class AugmentationWithGaussianNoise:
 
 
 class MaskBaseDataset(data.Dataset):
-    num_classes = 3
+    num_classes = 3 * 2 * 3
 
-    class Labels:
+    class MaskLabels:
         mask = 0
         incorrect = 1
         normal = 2
 
+    class GenderLabels:
+        male = 0
+        female = 1
+
+    class AgeGroup:
+        map_label = lambda x: 0 if int(x) < 30 else 1 if int(x) < 60 else 2
+
     _file_names = {
-        "mask1.jpg": Labels.mask,
-        "mask2.jpg": Labels.mask,
-        "mask3.jpg": Labels.mask,
-        "mask4.jpg": Labels.mask,
-        "mask5.jpg": Labels.mask,
-        "incorrect_mask.jpg": Labels.incorrect,
-        "normal.jpg": Labels.normal
+        "mask1.jpg": MaskLabels.mask,
+        "mask2.jpg": MaskLabels.mask,
+        "mask3.jpg": MaskLabels.mask,
+        "mask4.jpg": MaskLabels.mask,
+        "mask5.jpg": MaskLabels.mask,
+        "incorrect_mask.jpg": MaskLabels.incorrect,
+        "normal.jpg": MaskLabels.normal
     }
 
     image_paths = []
-    labels = []
+    mask_labels = []
+    gender_labels = []
+    age_labels = []
 
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.data_dir = data_dir
         self.mean = mean
         self.std = std
         self.transform = BaseAugmentation((96, 128), mean, std)
+        print("=" * 100)
+        print(data_dir)
 
         self.setup()
         self.calc_statistics()
@@ -100,7 +111,14 @@ class MaskBaseDataset(data.Dataset):
                 img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
                 if os.path.exists(img_path) and is_image_file(img_path):
                     self.image_paths.append(img_path)
-                    self.labels.append(label)
+                    self.mask_labels.append(label)
+
+                    id, gender, race, age = profile.split("_")
+                    gender_label = getattr(self.GenderLabels, gender)
+                    age_label = self.AgeGroup.map_label(age)
+
+                    self.gender_labels.append(gender_label)
+                    self.age_labels.append(age_label)
 
     def calc_statistics(self):
         has_statistics = self.mean is not None and self.std is not None
@@ -121,50 +139,19 @@ class MaskBaseDataset(data.Dataset):
 
     def __getitem__(self, index):
         image = self.read_image(index)
-        label = self.get_label(index)
+        mask_label = self.get_mask_label(index)
+        gender_label = self.get_gender_label(index)
+        age_label = self.get_age_label(index)
+        multi_class_label = self.map_multi_class(mask_label, gender_label, age_label)
 
         image_transform = self.transform(image)
-        return image_transform, label
+        return image_transform, multi_class_label
 
     def __len__(self):
         return len(self.image_paths)
 
-    def get_label(self, index):
-        return self.labels[index]
-
-    def read_image(self, index):
-        image_path = self.image_paths[index]
-        return Image.open(image_path)
-
-
-class MaskMultiLabelDataset(MaskBaseDataset):
-    num_classes = 3 + 2 + 3
-
-    class GenderLabels:
-        male = 0
-        female = 1
-
-    class AgeGroup:
-        map_label = lambda x: 0 if int(x) < 30 else 1 if int(x) < 60 else 2
-
-    gender_labels = []
-    age_labels = []
-
-    def setup(self):
-        profiles = os.listdir(self.data_dir)
-        for profile in profiles:
-            for file_name, label in self._file_names.items():
-                img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
-                if os.path.exists(img_path) and is_image_file(img_path):
-                    self.image_paths.append(img_path)
-                    self.labels.append(label)
-
-                    id, gender, race, age = profile.split("_")
-                    gender_label = getattr(self.GenderLabels, gender)
-                    age_label = self.AgeGroup.map_label(age)
-
-                    self.gender_labels.append(gender_label)
-                    self.age_labels.append(age_label)
+    def get_mask_label(self, index):
+        return self.mask_labels[index]
 
     def get_gender_label(self, index):
         return self.gender_labels[index]
@@ -172,32 +159,13 @@ class MaskMultiLabelDataset(MaskBaseDataset):
     def get_age_label(self, index):
         return self.age_labels[index]
 
-    def __getitem__(self, index):
-        image = self.read_image(index)
-        mask_label = self.get_label(index)
-        gender_label = self.get_gender_label(index)
-        age_label = self.get_age_label(index)
-
-        image_transform = self.transform(image)
-        return image_transform, mask_label, gender_label, age_label
-
-
-class MaskMultiClassDataset(MaskMultiLabelDataset):
-    num_classes = 3 * 2 * 3
-
     @staticmethod
     def map_multi_class(mask_label, gender_label, age_label):
         return mask_label * 6 + gender_label * 3 + age_label
 
-    def __getitem__(self, index):
-        image = self.read_image(index)
-        mask_label = self.get_label(index)
-        gender_label = self.get_gender_label(index)
-        age_label = self.get_age_label(index)
-        multi_class_label = self.map_multi_class(mask_label, gender_label, age_label)
-
-        image_transform = self.transform(image)
-        return image_transform, multi_class_label
+    def read_image(self, index):
+        image_path = self.image_paths[index]
+        return Image.open(image_path)
 
 
 class TestDataset(data.Dataset):

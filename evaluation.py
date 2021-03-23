@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report
 
+from dataset import MaskBaseDataset
+
 
 def evaluation(gt_path, pred_path):
     """
@@ -13,7 +15,7 @@ def evaluation(gt_path, pred_path):
         gt_path (string) : root directory of ground truth file
         pred_path (string) : root directory of prediction file (output of inference.py)
     """
-    num_classes = getattr(import_module("dataset"), args.dataset).num_classes
+    num_classes = MaskBaseDataset.num_classes  # 18
     results = {}
     for access in ['public', 'private']:
         gt = pd.read_csv(os.path.join(gt_path, f'{access}.csv'))
@@ -32,7 +34,6 @@ def evaluation(gt_path, pred_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
     args = parser.parse_args()
 
     gt_path = os.environ.get('SM_GROUND_TRUTH_DIR')

@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from dataset import TestDataset
+from dataset import TestDataset, MaskBaseDataset
 
 
 def load_model(saved_model, num_classes):
@@ -33,7 +33,7 @@ def inference(data_dir, model_dir, output_dir, args):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    num_classes = getattr(import_module("dataset"), args.dataset).num_classes
+    num_classes = MaskBaseDataset.num_classes  # 18
     model = load_model(model_dir, num_classes).to(device)
     if num_gpus > 1:
         model = torch.nn.DataParallel(model)
@@ -72,7 +72,6 @@ if __name__ == '__main__':
 
     # Data and model checkpoints directories
     parser.add_argument('--batch_size', type=int, default=1000, help='input batch size for validing (default: 1000)')
-    parser.add_argument('--dataset', type=str, default='MaskMultiClassDataset', help='dataset type (default: MaskMultiClassDataset)')
     parser.add_argument('--resize', type=tuple, default=(96, 128), help='resize size for image when you trained (default: (96, 128))')
     parser.add_argument('--model', type=str, default='BaseModel', help='model type (default: BaseModel)')
 
