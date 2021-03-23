@@ -89,8 +89,6 @@ class MaskBaseDataset(data.Dataset):
         self.mean = mean
         self.std = std
         self.transform = BaseAugmentation((96, 128), mean, std)
-        print("=" * 100)
-        print(data_dir)
 
         self.setup()
         self.calc_statistics()
