@@ -7,15 +7,6 @@ from PIL import Image
 from torchvision import transforms
 from torchvision.transforms import Resize, ToTensor, Normalize, RandomRotation
 
-IMG_EXTENSIONS = [
-    ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
-    ".PNG", ".ppm", ".PPM", ".bmp", ".BMP",
-]
-
-
-def is_image_file(filename):
-    return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
-
 
 class BaseAugmentation:
     def __init__(self, resize, mean, std, **args):
@@ -109,7 +100,7 @@ class MaskBaseDataset(data.Dataset):
         for profile in profiles:
             for file_name, label in self._file_names.items():
                 img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
-                if os.path.exists(img_path) and is_image_file(img_path):
+                if os.path.exists(img_path):
                     self.image_paths.append(img_path)
                     self.mask_labels.append(label)
 
