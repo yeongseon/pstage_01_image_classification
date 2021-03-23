@@ -34,7 +34,7 @@ def grid_image(np_images, gts, preds, n=16):
 
     choices = random.choices(range(batch_size), k=n)
     figure = plt.figure(figsize=(15, 15))
-    plt.subplots_adjust(top=0.80)  # (0.95: n=16, n_task=3)
+    plt.subplots_adjust(top=0.80)  # (0.80: n=16, n_task=3)
     n_grid = np.ceil(n ** 0.5)
     tasks = ["mask", "gender", "age"]
     for idx, choice in enumerate(choices):
