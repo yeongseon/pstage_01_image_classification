@@ -131,7 +131,7 @@ class MaskBaseDataset(data.Dataset):
         mask_label = self.get_mask_label(index)
         gender_label = self.get_gender_label(index)
         age_label = self.get_age_label(index)
-        multi_class_label = self.map_multi_class(mask_label, gender_label, age_label)
+        multi_class_label = self.encode_multi_class(mask_label, gender_label, age_label)
 
         image_transform = self.transform(image)
         return image_transform, multi_class_label
@@ -148,13 +148,28 @@ class MaskBaseDataset(data.Dataset):
     def get_age_label(self, index):
         return self.age_labels[index]
 
-    @staticmethod
-    def map_multi_class(mask_label, gender_label, age_label):
-        return mask_label * 6 + gender_label * 3 + age_label
-
     def read_image(self, index):
         image_path = self.image_paths[index]
         return Image.open(image_path)
+
+    @staticmethod
+    def encode_multi_class(mask_label, gender_label, age_label):
+        return mask_label * 6 + gender_label * 3 + age_label
+
+    @staticmethod
+    def decode_multi_class(multi_class_label):
+        mask_label = (multi_class_label // 6) % 3
+        gender_label = (multi_class_label // 3) % 2
+        age_label = multi_class_label % 3
+        return mask_label, gender_label, age_label
+
+    def denormalize_image(self, image):
+        img_cp = image.copy()
+        img_cp *= self.std
+        img_cp += self.mean
+        img_cp *= 255.0
+        img_cp = np.clip(img_cp, 0, 255).astype(np.uint8)
+        return img_cp
 
 
 class TestDataset(data.Dataset):

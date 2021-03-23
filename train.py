@@ -8,6 +8,7 @@ from importlib import import_module
 from pathlib import Path
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import Subset, DataLoader
@@ -25,6 +26,37 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
     np.random.seed(seed)
     random.seed(seed)
+
+
+def grid_image(np_images, gts, preds, n=16):
+    batch_size = np_images.shape[0]
+    assert n <= batch_size
+
+    choices = random.choices(range(batch_size), k=n)
+    figure = plt.figure(figsize=(15, 15))
+    plt.subplots_adjust(top=0.80)  # (0.95: n=16, n_task=3)
+    n_grid = np.ceil(n ** 0.5)
+    tasks = ["mask", "gender", "age"]
+    for idx, choice in enumerate(choices):
+        gt = gts[choice].item()
+        pred = preds[choice].item()
+        image = np_images[choice]
+        # title = f"gt: {gt}, pred: {pred}"
+        gt_decoded_labels = MaskBaseDataset.decode_multi_class(gt)
+        pred_decoded_labels = MaskBaseDataset.decode_multi_class(pred)
+        title = "\n".join([
+            f"{task} - gt: {gt_label}, pred: {pred_label}"
+            for gt_label, pred_label, task
+            in zip(gt_decoded_labels, pred_decoded_labels, tasks)
+        ])
+
+        plt.subplot(n_grid, n_grid, idx + 1, title=title)
+        plt.xticks([])
+        plt.yticks([])
+        plt.grid(False)
+        plt.imshow(image, cmap=plt.cm.binary)
+
+    return figure
 
 
 def increment_path(path, exist_ok=False):
@@ -161,6 +193,7 @@ def train(data_dir, model_dir, args):
             model.eval()
             val_loss_items = []
             val_acc_items = []
+            figure = None
             for val_batch in val_loader:
                 inputs, labels = val_batch
                 inputs = inputs.to(device)
@@ -173,6 +206,11 @@ def train(data_dir, model_dir, args):
                 acc_item = (labels == preds).sum().item()
                 val_loss_items.append(loss_item)
                 val_acc_items.append(acc_item)
+
+                if figure is None:
+                    inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
+                    inputs_np = dataset.denormalize_image(inputs_np)
+                    figure = grid_image(inputs_np, labels, preds)
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
@@ -188,6 +226,7 @@ def train(data_dir, model_dir, args):
             )
             logger.add_scalar("Val/loss", val_loss, epoch)
             logger.add_scalar("Val/accuracy", val_acc, epoch)
+            logger.add_figure("results", figure, epoch)
             print()
 
 
