@@ -9,18 +9,19 @@ from torch.utils.data import DataLoader
 from dataset import TestDataset, MaskBaseDataset
 
 
-def load_model(saved_model, num_classes):
+def load_model(saved_model, num_classes, device):
     model_cls = getattr(import_module("model"), args.model)
     model = model_cls(
         num_classes=num_classes
     )
+    model = torch.nn.DataParallel(model)
 
     # tarpath = os.path.join(saved_model, 'best.tar.gz')
     # tar = tarfile.open(tarpath, 'r:gz')
     # tar.extractall(path=saved_model)
 
     model_path = os.path.join(saved_model, 'best.pth')
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, map_location=device))
 
     return model
 
@@ -29,14 +30,11 @@ def load_model(saved_model, num_classes):
 def inference(data_dir, model_dir, output_dir, args):
     """
     """
-    num_gpus = torch.cuda.device_count()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     num_classes = MaskBaseDataset.num_classes  # 18
-    model = load_model(model_dir, num_classes).to(device)
-    if num_gpus > 1:
-        model = torch.nn.DataParallel(model)
+    model = load_model(model_dir, num_classes, device).to(device)
     model.eval()
 
     img_root = os.path.join(data_dir, 'images')
