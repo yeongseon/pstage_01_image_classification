@@ -177,10 +177,11 @@ class MaskBaseDataset(data.Dataset):
         age_label = multi_class_label % 3
         return mask_label, gender_label, age_label
 
-    def denormalize_image(self, image):
+    @staticmethod
+    def denormalize_image(image, mean, std):
         img_cp = image.copy()
-        img_cp *= self.std
-        img_cp += self.mean
+        img_cp *= std
+        img_cp += mean
         img_cp *= 255.0
         img_cp = np.clip(img_cp, 0, 255).astype(np.uint8)
         return img_cp

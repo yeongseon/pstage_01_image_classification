@@ -211,7 +211,7 @@ def train(data_dir, model_dir, args):
 
                 if figure is None:
                     inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
-                    inputs_np = dataset.denormalize_image(inputs_np)
+                    inputs_np = dataset_module.denormalize_image(inputs_np, dataset.mean, dataset.std)
                     figure = grid_image(inputs_np, labels, preds)
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
