@@ -12,12 +12,9 @@ class BaseModel(nn.Module):
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.25)
-        self.dropout3 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(77952, 128)
-        self.fc2 = nn.Linear(128, num_classes)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(128, num_classes)
 
-    # recpetive field: 13
-    # https://fomoro.com/research/article/receptive-field-calculator#7,1,1,VALID;3,2,1,VALID;3,2,1,VALID
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
@@ -32,12 +29,9 @@ class BaseModel(nn.Module):
         x = F.max_pool2d(x, 2)
         x = self.dropout2(x)
 
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout3(x)
-
-        return self.fc2(x)
+        x = self.avgpool(x)
+        x = x.view(-1, 128)
+        return self.fc(x)
 
 
 # Custom Model Template
@@ -52,7 +46,6 @@ class MyModel(nn.Module):
         """
 
     def forward(self, x):
-
         """
         1. 위에서 정의한 모델 아키텍쳐를 forward propagation 을 진행해주세요
         2. 결과로 나온 output 을 return 해주세요
