@@ -108,9 +108,7 @@ def train(data_dir, model_dir, args):
     dataset.set_transform(transform)
 
     # -- data_loader
-    n_val = int(len(dataset) * args.val_ratio)
-    n_train = len(dataset) - n_val
-    train_set, val_set = torch.utils.data.random_split(dataset, [n_train, n_val])
+    train_set, val_set = dataset.split_dataset()
 
     train_loader = DataLoader(
         train_set,
@@ -240,6 +238,7 @@ if __name__ == '__main__':
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train (default: 1)')
+    parser.add_argument('--dataset', type=str, default='MaskBaseDataset', help='dataset augmentation type (default: MaskBaseDataset)')
     parser.add_argument('--augmentation', type=str, default='BaseAugmentation', help='data augmentation type (default: BaseAugmentation)')
     parser.add_argument('--resize', type=tuple, default=(96, 128), help='resize size for image when training (default: (96, 128))')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size for training (default: 64)')
