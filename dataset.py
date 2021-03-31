@@ -5,14 +5,22 @@ import torch
 import torch.utils.data as data
 from PIL import Image
 from torchvision import transforms
-from torchvision.transforms import Resize, ToTensor, Normalize, RandomRotation
+from torchvision.transforms import *
+
+IMG_EXTENSIONS = [
+    ".jpg", ".JPG", ".jpeg", ".JPEG", ".png",
+    ".PNG", ".ppm", ".PPM", ".bmp", ".BMP",
+]
+
+
+def is_image_file(filename):
+    return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 
 class BaseAugmentation:
     def __init__(self, resize, mean, std, **args):
         self.transform = transforms.Compose([
             Resize(resize, Image.BILINEAR),
-            RandomRotation([-8, +8]),
             ToTensor(),
             Normalize(mean=mean, std=std),
         ])
@@ -33,27 +41,6 @@ class AddGaussianNoise(object):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 
-class AugmentationWithGaussianNoise:
-    """
-    Custom Augmentation Example
-    """
-
-    def __init__(self, resize, mean, std, **args):
-        noise_mean = args.get("noise_mean", 0.)
-        noise_std = args.get("noise_std", 1.)
-
-        self.transform = transforms.Compose([
-            Resize(resize, Image.BILINEAR),
-            RandomRotation([-8, +8]),
-            ToTensor(),
-            Normalize(mean=mean, std=std),
-            AddGaussianNoise(noise_mean, noise_std)
-        ])
-
-    def __call__(self, image):
-        return self.transform(image)
-
-
 class MaskBaseDataset(data.Dataset):
     num_classes = 3 * 2 * 3
 
@@ -70,13 +57,13 @@ class MaskBaseDataset(data.Dataset):
         map_label = lambda x: 0 if int(x) < 30 else 1 if int(x) < 60 else 2
 
     _file_names = {
-        "mask1.jpg": MaskLabels.mask,
-        "mask2.jpg": MaskLabels.mask,
-        "mask3.jpg": MaskLabels.mask,
-        "mask4.jpg": MaskLabels.mask,
-        "mask5.jpg": MaskLabels.mask,
-        "incorrect_mask.jpg": MaskLabels.incorrect,
-        "normal.jpg": MaskLabels.normal
+        "mask1": MaskLabels.mask,
+        "mask2": MaskLabels.mask,
+        "mask3": MaskLabels.mask,
+        "mask4": MaskLabels.mask,
+        "mask5": MaskLabels.mask,
+        "incorrect_mask": MaskLabels.incorrect,
+        "normal": MaskLabels.normal
     }
 
     image_paths = []
@@ -96,18 +83,26 @@ class MaskBaseDataset(data.Dataset):
     def setup(self):
         profiles = os.listdir(self.data_dir)
         for profile in profiles:
-            for file_name, label in self._file_names.items():
+            if profile.startswith("."):  # "." 로 시작하는 파일은 무시합니다
+                continue
+
+            img_folder = os.path.join(self.data_dir, profile)
+            for file_name in os.listdir(img_folder):
+                _file_name, ext = os.path.splitext(file_name)
+                if _file_name not in self._file_names:  # "." 로 시작하는 파일 및 invalid 한 파일들은 무시합니다
+                    continue
+
                 img_path = os.path.join(self.data_dir, profile, file_name)  # (resized_data, 000004_male_Asian_54, mask1.jpg)
-                if os.path.exists(img_path):
-                    self.image_paths.append(img_path)
-                    self.mask_labels.append(label)
+                mask_label = self._file_names[_file_name]
 
-                    id, gender, race, age = profile.split("_")
-                    gender_label = getattr(self.GenderLabels, gender)
-                    age_label = self.AgeGroup.map_label(age)
+                id, gender, race, age = profile.split("_")
+                gender_label = getattr(self.GenderLabels, gender)
+                age_label = self.AgeGroup.map_label(age)
 
-                    self.gender_labels.append(gender_label)
-                    self.age_labels.append(age_label)
+                self.image_paths.append(img_path)
+                self.mask_labels.append(mask_label)
+                self.gender_labels.append(gender_label)
+                self.age_labels.append(age_label)
 
     def calc_statistics(self):
         has_statistics = self.mean is not None and self.std is not None
