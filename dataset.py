@@ -44,6 +44,21 @@ class AddGaussianNoise(object):
         return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 
+class CustomAugmentation:
+    def __init__(self, resize, mean, std, **args):
+        self.transform = transforms.Compose([
+            CenterCrop((320, 256)),
+            Resize(resize, Image.BILINEAR),
+            ColorJitter(0.1, 0.1, 0.1, 0.1),
+            ToTensor(),
+            Normalize(mean=mean, std=std),
+            AddGaussianNoise()
+        ])
+
+    def __call__(self, image):
+        return self.transform(image)
+
+
 class MaskBaseDataset(data.Dataset):
     num_classes = 3 * 2 * 3
 
