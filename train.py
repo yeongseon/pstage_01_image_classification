@@ -28,6 +28,11 @@ def seed_everything(seed):
     random.seed(seed)
 
 
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
+
 def grid_image(np_images, gts, preds, n=16):
     batch_size = np_images.shape[0]
     assert n <= batch_size
@@ -173,7 +178,7 @@ def train(data_dir, model_dir, args):
             if (idx + 1) % args.log_interval == 0:
                 train_loss = loss_value / args.log_interval
                 train_acc = matches / args.batch_size / args.log_interval
-                current_lr = scheduler.get_last_lr()
+                current_lr = get_lr(optimizer)
                 print(
                     f"Epoch[{epoch}/{args.epochs}]({idx + 1}/{len(train_loader)}) || "
                     f"training loss {train_loss:4.4} || training accuracy {train_acc:4.2%} || lr {current_lr}"
