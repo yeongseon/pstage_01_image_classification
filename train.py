@@ -88,19 +88,19 @@ def train(data_dir, model_dir, args):
     save_dir = increment_path(os.path.join(model_dir, args.name))
 
     # -- settings
-    num_gpus = torch.cuda.device_count()
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
 
     # -- dataset
-    dataset = MaskBaseDataset(
+    dataset_module = getattr(import_module("dataset"), args.dataset)  # default: BaseAugmentation
+    dataset = dataset_module(
         data_dir=data_dir,
     )
     num_classes = dataset.num_classes  # 18
 
     # -- augmentation
-    transform_cls = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation
-    transform = transform_cls(
+    transform_module = getattr(import_module("dataset"), args.augmentation)  # default: BaseAugmentation
+    transform = transform_module(
         resize=args.resize,
         mean=dataset.mean,
         std=dataset.std,
@@ -129,16 +129,16 @@ def train(data_dir, model_dir, args):
     )
 
     # -- model
-    model_cls = getattr(import_module("model"), args.model)  # default: BaseModel
-    model = model_cls(
+    model_module = getattr(import_module("model"), args.model)  # default: BaseModel
+    model = model_module(
         num_classes=num_classes
     ).to(device)
     model = torch.nn.DataParallel(model)
 
     # -- loss & metric
     criterion = create_criterion(args.criterion)  # default: label_smoothing
-    opt_cls = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
-    optimizer = opt_cls(
+    opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
+    optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
         weight_decay=5e-4
