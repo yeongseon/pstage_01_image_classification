@@ -193,7 +193,7 @@ class MaskBaseDataset(data.Dataset):
         return train_set, val_set
 
 
-class MaskSplitValidationDataset(MaskBaseDataset):
+class MaskSplitByProfileDataset(MaskBaseDataset):
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
         self.indices = defaultdict(list)
         super().__init__(data_dir, mean, std, val_ratio)
