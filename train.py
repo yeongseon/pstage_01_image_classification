@@ -38,8 +38,8 @@ def grid_image(np_images, gts, preds, n=16):
     assert n <= batch_size
 
     choices = random.choices(range(batch_size), k=n)
-    figure = plt.figure(figsize=(15, 15))
-    plt.subplots_adjust(top=0.80)  # cautions: hardcoded, 이미지 크기에 따라 grid 사이즈가 안맞을 수 있습니다.. T.T
+    figure = plt.figure(figsize=(12, 18 + 2))  # cautions: hardcoded, 이미지 크기에 따라 figsize 를 조정해야 할 수 있습니다. T.T
+    plt.subplots_adjust(top=0.8)               # cautions: hardcoded, 이미지 크기에 따라 top 를 조정해야 할 수 있습니다. T.T
     n_grid = np.ceil(n ** 0.5)
     tasks = ["mask", "gender", "age"]
     for idx, choice in enumerate(choices):
@@ -136,7 +136,7 @@ def train(data_dir, model_dir, args):
     model = torch.nn.DataParallel(model)
 
     # -- loss & metric
-    criterion = create_criterion(args.criterion)  # default: label_smoothing
+    criterion = create_criterion(args.criterion)  # default: cross_entropy
     opt_module = getattr(import_module("torch.optim"), args.optimizer)  # default: SGD
     optimizer = opt_module(
         filter(lambda p: p.requires_grad, model.parameters()),
