@@ -33,11 +33,11 @@ def get_lr(optimizer):
         return param_group['lr']
 
 
-def grid_image(np_images, gts, preds, n=16):
+def grid_image(np_images, gts, preds, n=16, shuffle=False):
     batch_size = np_images.shape[0]
     assert n <= batch_size
 
-    choices = random.choices(range(batch_size), k=n)
+    choices = random.choices(range(batch_size), k=n) if shuffle else list(range(n))
     figure = plt.figure(figsize=(12, 18 + 2))  # cautions: hardcoded, 이미지 크기에 따라 figsize 를 조정해야 할 수 있습니다. T.T
     plt.subplots_adjust(top=0.8)               # cautions: hardcoded, 이미지 크기에 따라 top 를 조정해야 할 수 있습니다. T.T
     n_grid = np.ceil(n ** 0.5)
@@ -212,7 +212,7 @@ def train(data_dir, model_dir, args):
                 if figure is None:
                     inputs_np = torch.clone(inputs).detach().cpu().permute(0, 2, 3, 1).numpy()
                     inputs_np = dataset_module.denormalize_image(inputs_np, dataset.mean, dataset.std)
-                    figure = grid_image(inputs_np, labels, preds)
+                    figure = grid_image(inputs_np, labels, preds, args.dataset != "MaskSplitByProfileDataset")
 
             val_loss = np.sum(val_loss_items) / len(val_loader)
             val_acc = np.sum(val_acc_items) / len(val_set)
