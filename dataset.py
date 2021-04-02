@@ -33,6 +33,10 @@ class BaseAugmentation:
 
 
 class AddGaussianNoise(object):
+    """
+        transform 에 없는 기능들은 이런식으로 __init__, __call__, __repr__ 부분을
+        직접 구현하여 사용할 수 있습니다.
+    """
     def __init__(self, mean=0., std=1.):
         self.std = std
         self.mean = mean
@@ -194,6 +198,12 @@ class MaskBaseDataset(data.Dataset):
 
 
 class MaskSplitByProfileDataset(MaskBaseDataset):
+    """
+        train / val 나누는 기준을 이미지에 대해서 random 이 아닌
+        사람(profile)을 기준으로 나눕니다.
+        구현은 val_ratio 에 맞게 train / val 나누는 것을 이미지 전체가 아닌 사람(profile)에 대해서 진행하여 indexing 을 합니다
+        이후 `split_dataset` 에서 index 에 맞게 Subset 으로 dataset 을 분기합니다.
+    """
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
         self.indices = defaultdict(list)
         super().__init__(data_dir, mean, std, val_ratio)
