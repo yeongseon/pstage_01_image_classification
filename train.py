@@ -7,6 +7,7 @@ import re
 from importlib import import_module
 from pathlib import Path
 
+import nni as nni
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -229,7 +230,10 @@ def train(data_dir, model_dir, args):
             logger.add_scalar("Val/loss", val_loss, epoch)
             logger.add_scalar("Val/accuracy", val_acc, epoch)
             logger.add_figure("results", figure, epoch)
+            nni.report_intermediate_result(val_acc)
             print()
+
+    nni.report_intermediate_result(val_acc)
 
 
 if __name__ == '__main__':
@@ -262,4 +266,9 @@ if __name__ == '__main__':
     data_dir = args.data_dir
     model_dir = args.model_dir
 
-    train(data_dir, model_dir, args)
+    try:
+        # get parameters form tuner
+        tuner_params = nni.get_next_parameter()
+        train(data_dir, model_dir, args)
+    except Exception as exception:
+        raise
