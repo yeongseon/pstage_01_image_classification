@@ -14,7 +14,6 @@ def load_model(saved_model, num_classes, device):
     model = model_cls(
         num_classes=num_classes
     )
-    model = torch.nn.DataParallel(model)
 
     # tarpath = os.path.join(saved_model, 'best.tar.gz')
     # tar = tarfile.open(tarpath, 'r:gz')
@@ -52,12 +51,14 @@ def inference(data_dir, model_dir, output_dir, args):
         drop_last=False,
     )
 
+    print("Calculating inference results..")
     preds = []
-    for idx, images in enumerate(loader):
-        images = images.to(device)
-        pred = model(images)
-        pred = pred.argmax(dim=-1)
-        preds.extend(pred.cpu().numpy())
+    with torch.no_grad():
+        for idx, images in enumerate(loader):
+            images = images.to(device)
+            pred = model(images)
+            pred = pred.argmax(dim=-1)
+            preds.extend(pred.cpu().numpy())
 
     info['ans'] = preds
     info.to_csv(os.path.join(output_dir, f'output.csv'), index=False)
