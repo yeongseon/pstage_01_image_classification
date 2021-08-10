@@ -2,10 +2,11 @@ import os
 import random
 from collections import defaultdict
 from enum import Enum
+from typing import Tuple, List
 
 import numpy as np
 import torch
-import torch.utils.data as data
+from torch.utils.data import Dataset
 from PIL import Image
 from torch.utils.data import Subset
 from torchvision import transforms
@@ -190,13 +191,13 @@ class MaskBaseDataset(Dataset):
     def __len__(self):
         return len(self.image_paths)
 
-    def get_mask_label(self, index):
+    def get_mask_label(self, index) -> MaskLabels:
         return self.mask_labels[index]
 
-    def get_gender_label(self, index):
+    def get_gender_label(self, index) -> GenderLabels:
         return self.gender_labels[index]
 
-    def get_age_label(self, index):
+    def get_age_label(self, index) -> AgeLabels:
         return self.age_labels[index]
 
     def read_image(self, index):
@@ -204,11 +205,11 @@ class MaskBaseDataset(Dataset):
         return Image.open(image_path)
 
     @staticmethod
-    def encode_multi_class(mask_label, gender_label, age_label):
+    def encode_multi_class(mask_label, gender_label, age_label) -> int:
         return mask_label * 6 + gender_label * 3 + age_label
 
     @staticmethod
-    def decode_multi_class(multi_class_label):
+    def decode_multi_class(multi_class_label) -> Tuple[MaskLabels, GenderLabels, AgeLabels]:
         mask_label = (multi_class_label // 6) % 3
         gender_label = (multi_class_label // 3) % 2
         age_label = multi_class_label % 3
@@ -223,7 +224,7 @@ class MaskBaseDataset(Dataset):
         img_cp = np.clip(img_cp, 0, 255).astype(np.uint8)
         return img_cp
 
-    def split_dataset(self):
+    def split_dataset(self) -> Tuple[Subset, Subset]:
         n_val = int(len(self) * self.val_ratio)
         n_train = len(self) - n_val
         train_set, val_set = torch.utils.data.random_split(self, [n_train, n_val])
@@ -237,6 +238,7 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
         구현은 val_ratio 에 맞게 train / val 나누는 것을 이미지 전체가 아닌 사람(profile)에 대해서 진행하여 indexing 을 합니다
         이후 `split_dataset` 에서 index 에 맞게 Subset 으로 dataset 을 분기합니다.
     """
+
     def __init__(self, data_dir, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246), val_ratio=0.2):
         self.indices = defaultdict(list)
         super().__init__(data_dir, mean, std, val_ratio)
@@ -283,11 +285,11 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     self.indices[phase].append(cnt)
                     cnt += 1
 
-    def split_dataset(self):
+    def split_dataset(self) -> List[Subset]:
         return [Subset(self, indices) for phase, indices in self.indices.items()]
 
 
-class TestDataset(data.Dataset):
+class TestDataset(Dataset):
     def __init__(self, img_paths, resize, mean=(0.548, 0.504, 0.479), std=(0.237, 0.247, 0.246)):
         self.img_paths = img_paths
         self.transform = transforms.Compose([
