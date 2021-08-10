@@ -1,6 +1,7 @@
 import os
 import random
 from collections import defaultdict
+from enum import Enum
 
 import numpy as np
 import torch
@@ -37,6 +38,7 @@ class AddGaussianNoise(object):
         transform 에 없는 기능들은 이런식으로 __init__, __call__, __repr__ 부분을
         직접 구현하여 사용할 수 있습니다.
     """
+
     def __init__(self, mean=0., std=1.):
         self.std = std
         self.mean = mean
@@ -63,29 +65,58 @@ class CustomAugmentation:
         return self.transform(image)
 
 
-class MaskBaseDataset(data.Dataset):
+class MaskLabels(int, Enum):
+    MASK = 0
+    INCORRECT = 1
+    NORMAL = 2
+
+
+class GenderLabels(int, Enum):
+    MALE = 0
+    FEMALE = 1
+
+    @classmethod
+    def from_str(cls, value: str) -> int:
+        value = value.lower()
+        if value == "male":
+            return cls.MALE
+        elif value == "female":
+            return cls.FEMALE
+        else:
+            raise ValueError(f"Gender value should be either 'male' or 'female', {value}")
+
+
+class AgeLabels(int, Enum):
+    YOUNG = 0
+    MIDDLE = 1
+    OLD = 2
+
+    @classmethod
+    def from_number(cls, value: str) -> int:
+        try:
+            value = int(value)
+        except Exception:
+            raise ValueError(f"Age value should be numeric, {value}")
+
+        if value < 30:
+            return cls.YOUNG
+        elif value < 60:
+            return cls.MIDDLE
+        else:
+            return cls.OLD
+
+
+class MaskBaseDataset(Dataset):
     num_classes = 3 * 2 * 3
 
-    class MaskLabels:
-        mask = 0
-        incorrect = 1
-        normal = 2
-
-    class GenderLabels:
-        male = 0
-        female = 1
-
-    class AgeGroup:
-        map_label = lambda x: 0 if int(x) < 30 else 1 if int(x) < 60 else 2
-
     _file_names = {
-        "mask1": MaskLabels.mask,
-        "mask2": MaskLabels.mask,
-        "mask3": MaskLabels.mask,
-        "mask4": MaskLabels.mask,
-        "mask5": MaskLabels.mask,
-        "incorrect_mask": MaskLabels.incorrect,
-        "normal": MaskLabels.normal
+        "mask1": MaskLabels.MASK,
+        "mask2": MaskLabels.MASK,
+        "mask3": MaskLabels.MASK,
+        "mask4": MaskLabels.MASK,
+        "mask5": MaskLabels.MASK,
+        "incorrect_mask": MaskLabels.INCORRECT,
+        "normal": MaskLabels.NORMAL
     }
 
     image_paths = []
@@ -119,8 +150,8 @@ class MaskBaseDataset(data.Dataset):
                 mask_label = self._file_names[_file_name]
 
                 id, gender, race, age = profile.split("_")
-                gender_label = getattr(self.GenderLabels, gender)
-                age_label = self.AgeGroup.map_label(age)
+                gender_label = GenderLabels.from_str(gender)
+                age_label = AgeLabels.from_number(age)
 
                 self.image_paths.append(img_path)
                 self.mask_labels.append(mask_label)
@@ -130,7 +161,7 @@ class MaskBaseDataset(data.Dataset):
     def calc_statistics(self):
         has_statistics = self.mean is not None and self.std is not None
         if not has_statistics:
-            print("[Warning] Calculating statistics... It can takes huge amounts of time depending on your CPU machine :(")
+            print("[Warning] Calculating statistics... It can take a long time depending on your CPU machine")
             sums = []
             squared = []
             for image_path in self.image_paths[:3000]:
@@ -145,6 +176,8 @@ class MaskBaseDataset(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
+        assert self.transform is not None, ".set_tranform 메소드를 이용하여 transform 을 주입해주세요"
+
         image = self.read_image(index)
         mask_label = self.get_mask_label(index)
         gender_label = self.get_gender_label(index)
@@ -239,8 +272,8 @@ class MaskSplitByProfileDataset(MaskBaseDataset):
                     mask_label = self._file_names[_file_name]
 
                     id, gender, race, age = profile.split("_")
-                    gender_label = getattr(self.GenderLabels, gender)
-                    age_label = self.AgeGroup.map_label(age)
+                    gender_label = GenderLabels.from_str(gender)
+                    age_label = AgeLabels.from_number(age)
 
                     self.image_paths.append(img_path)
                     self.mask_labels.append(mask_label)
