@@ -6,9 +6,8 @@ from typing import Tuple, List
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
 from PIL import Image
-from torch.utils.data import Subset
+from torch.utils.data import Dataset, Subset, random_split
 from torchvision import transforms
 from torchvision.transforms import *
 
@@ -225,9 +224,15 @@ class MaskBaseDataset(Dataset):
         return img_cp
 
     def split_dataset(self) -> Tuple[Subset, Subset]:
+        """
+        데이터셋을 train 과 val 로 나눕니다,
+        pytorch 내부의 torch.utils.data.random_split 함수를 사용하여
+        torch.utils.data.Subset 클래스 둘로 나눕니다.
+        구현이 어렵지 않으니 구글링 혹은 IDE (e.g. pycharm) 의 navigation 기능을 통해 코드를 한 번 읽어보는 것을 추천드립니다^^
+        """
         n_val = int(len(self) * self.val_ratio)
         n_train = len(self) - n_val
-        train_set, val_set = torch.utils.data.random_split(self, [n_train, n_val])
+        train_set, val_set = random_split(self, [n_train, n_val])
         return train_set, val_set
 
 
