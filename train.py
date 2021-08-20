@@ -1,17 +1,18 @@
 import argparse
 import glob
 import json
+import multiprocessing
 import os
 import random
 import re
 from importlib import import_module
 from pathlib import Path
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch.optim.lr_scheduler import StepLR
-from torch.utils.data import Subset, DataLoader
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import MaskBaseDataset
@@ -113,7 +114,7 @@ def train(data_dir, model_dir, args):
     train_loader = DataLoader(
         train_set,
         batch_size=args.batch_size,
-        num_workers=8,
+        num_workers=multiprocessing.cpu_count()//2,
         shuffle=True,
         pin_memory=use_cuda,
         drop_last=True,
@@ -122,7 +123,7 @@ def train(data_dir, model_dir, args):
     val_loader = DataLoader(
         val_set,
         batch_size=args.valid_batch_size,
-        num_workers=8,
+        num_workers=multiprocessing.cpu_count()//2,
         shuffle=False,
         pin_memory=use_cuda,
         drop_last=True,
